@@ -1,0 +1,51 @@
+# DesignAI — Root .gitignore
+# ──────────────────────────
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+.npm
+npm-debug.log*
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+apps/web/build/
+
+# Python
+apps/api/__pycache__/
+apps/api/*.py[cod]
+apps/api/*$py.class
+apps/api/.venv/
+apps/api/venv/
+apps/api/dist/
+apps/api/*.egg-info/
+apps/api/.eggs/
+
+# Testing
+coverage/
+.nyc_output/
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Turbo
+.turbo/
+
+# Build artifacts
+*.log

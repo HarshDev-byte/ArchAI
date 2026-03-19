@@ -1,0 +1,129 @@
+services:
+  # ──────────────────────────────────────────
+  # Next.js Web App
+  # ──────────────────────────────────────────
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_MAPBOX_TOKEN=${MAPBOX_TOKEN}
+      - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - designai-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ──────────────────────────────────────────
+  # FastAPI Backend
+  # ──────────────────────────────────────────
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - ENVIRONMENT=development
+    volumes:
+      - ./apps/api:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - designai-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ──────────────────────────────────────────
+  # Celery Worker (background AI tasks)
+  # ──────────────────────────────────────────
+  celery-worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    command: celery -A workers.tasks worker --loglevel=info --concurrency=4
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - ENVIRONMENT=development
+    volumes:
+      - ./apps/api:/app
+    depends_on:
+      - redis
+      - api
+    networks:
+      - designai-net
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────
+  # Celery Flower (task monitoring UI)
+  # ──────────────────────────────────────────
+  celery-flower:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    command: celery -A workers.tasks flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - designai-net
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────
+  # Redis (message broker + result backend)
+  # ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - designai-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis-data:
+
+networks:
+  designai-net:
+    driver: bridge
