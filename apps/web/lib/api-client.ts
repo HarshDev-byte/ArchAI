@@ -1,4 +1,5 @@
 import axios from "axios";
+import { createClient } from "@/lib/supabase/client";
 
 export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
@@ -8,12 +9,14 @@ export const apiClient = axios.create({
   },
 });
 
-// Attach auth token if present (set after Supabase login)
-apiClient.interceptors.request.use((config) => {
+// Attach auth token from Supabase session
+apiClient.interceptors.request.use(async (config) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("sb-access-token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
     }
   }
   return config;

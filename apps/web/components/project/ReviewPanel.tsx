@@ -25,11 +25,11 @@ function wsBaseUrl(api: string) { return api.replace(/^http/, "ws") }
 // Progress stages
 // ─────────────────────────────────────────────────────────────
 const STAGES = [
-  { id: "creating",    label: "Creating project",           icon: "💾", pct: 10  },
-  { id: "analysing",   label: "Analysing plot dimensions",  icon: "📐", pct: 30  },
-  { id: "regulations", label: "Checking local regulations", icon: "📋", pct: 55  },
-  { id: "claude",      label: "Generating AI feasibility",  icon: "🧠", pct: 80  },
-  { id: "layouts",     label: "Creating 3 layout configs",  icon: "🏗️", pct: 100 },
+  { id: "creating",    label: "Creating project",           icon: "\ud83d\udcbe", pct: 10  },
+  { id: "analysing",   label: "Analysing plot dimensions",  icon: "\ud83d\udcd0", pct: 30  },
+  { id: "regulations", label: "Checking local regulations", icon: "\ud83d\udccb", pct: 55  },
+  { id: "claude",      label: "Generating AI feasibility",  icon: "\ud83e\udde0", pct: 80  },
+  { id: "layouts",     label: "Creating 3 layout configs",  icon: "\ud83c\udfd7\ufe0f", pct: 100 },
 ]
 
 type GenPhase = "idle" | "generating" | "error"
@@ -96,7 +96,7 @@ function ProgressOverlay({ stageId, pct, message, seconds }: { stageId: string; 
         <div className="absolute inset-0 rounded-full border border-[#7F77DD]/25" />
         <motion.div className="absolute inset-2 rounded-full border-2 border-t-[#7F77DD] border-r-[#7F77DD]/40 border-b-transparent border-l-transparent"
           animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} />
-        <span className="text-xl">{STAGES[Math.max(0, curIdx)]?.icon ?? "🧠"}</span>
+        <span className="text-xl">{STAGES[Math.max(0, curIdx)]?.icon ?? "\ud83e\udde0"}</span>
       </div>
 
       <p className="text-base font-semibold text-white mb-1">Generating your report…</p>
@@ -332,7 +332,7 @@ export function ReviewPanel() {
               {specialNotes && (
                 <div>
                   <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Notes</p>
-                  <p className="text-xs text-white/45 italic">"{specialNotes}"</p>
+                  <p className="text-xs text-white/45 italic">&ldquo;{specialNotes}&rdquo;</p>
                 </div>
               )}
             </div>

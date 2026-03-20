@@ -1,169 +1,135 @@
 "use client"
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
-import { useUser } from "@/hooks/use-user"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { LogOut, Bell, ChevronDown } from "lucide-react"
 import { useState } from "react"
-import type { PlanType } from "@/types/database"
+import { useRouter } from "next/navigation"
+import { LogOut, Menu, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useUser } from "@/hooks/use-user"
+import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
-// ── Plan badge variant map ────────────────────────────────────
-const planVariant: Record<PlanType, "starter" | "pro" | "enterprise"> = {
-  starter: "starter",
-  pro: "pro",
-  enterprise: "enterprise",
+interface NavbarProps {
+  onToggleSidebar?: () => void
+  isSidebarOpen?: boolean
 }
 
-const planLabel: Record<PlanType, string> = {
-  starter: "Starter",
-  pro: "Pro",
-  enterprise: "Enterprise",
-}
-
-// ── Avatar initials ───────────────────────────────────────────
-function getInitials(name: string | null | undefined): string {
-  if (!name) return "?"
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join("")
-}
-
-// ────────────────────────────────────────────────────────────
-// Navbar
-// ────────────────────────────────────────────────────────────
-
-export function Navbar() {
-  const { user, profile, isLoading } = useUser()
+export function Navbar({ onToggleSidebar, isSidebarOpen }: NavbarProps) {
   const router = useRouter()
+  const { user, profile } = useUser()
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  
   const supabase = createClient()
-  const [menuOpen, setMenuOpen] = useState(false)
 
-  const remaining =
-    profile ? Math.max(0, profile.designs_limit - profile.designs_used) : null
-  const plan = profile?.plan ?? "starter"
+  // Calculate designs remaining
+  const designsRemaining = profile 
+    ? Math.max(0, profile.designs_limit - profile.designs_used)
+    : 0
 
-  async function handleSignOut() {
-    await supabase.auth.signOut()
-    router.push("/login")
-    router.refresh()
+  // Get user initials
+  const getInitials = (name?: string) => {
+    if (!name) return user?.email?.charAt(0).toUpperCase() || "U"
+    return name
+      .split(" ")
+      .map(word => word.charAt(0))
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  // Get plan badge variant
+  const getPlanVariant = (plan?: string) => {
+    switch (plan?.toLowerCase()) {
+      case "enterprise":
+        return "default" // Purple
+      case "builder":
+        return "secondary" // Blue-ish
+      case "starter":
+      default:
+        return "outline" // Gray
+    }
+  }
+
+  // Sign out handler
+  const handleSignOut = async () => {
+    setIsSigningOut(true)
+    try {
+      await supabase.auth.signOut()
+      router.push("/login")
+    } catch (error) {
+      console.error("Sign out error:", error)
+    } finally {
+      setIsSigningOut(false)
+    }
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center border-b border-white/6 bg-[#0d0f14]/80 backdrop-blur-xl px-6 gap-4">
-      {/* ── Brand ── */}
-      <Link href="/dashboard" className="flex items-center gap-2 mr-4 shrink-0">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#7F77DD] shadow-md shadow-[#7F77DD]/30">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="white">
-            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" stroke="white" strokeWidth="1.5" fill="none" />
-          </svg>
-        </div>
-        <span className="text-base font-semibold tracking-tight text-white hidden sm:block">
-          Design<span className="text-[#7F77DD]">AI</span>
-        </span>
-      </Link>
-
-      {/* ── Spacer ── */}
-      <div className="flex-1" />
-
-      {/* ── Designs remaining pill ── */}
-      {!isLoading && remaining !== null && (
-        <div className="hidden md:flex items-center gap-2 rounded-full border border-white/8 bg-white/4 px-3 py-1.5">
-          <span className="text-xs text-white/40">Designs</span>
-          <span
-            className={cn(
-              "text-xs font-semibold tabular-nums",
-              remaining <= 1 ? "text-orange-400" : "text-white"
-            )}
-          >
-            {remaining}/{profile?.designs_limit}
-          </span>
-        </div>
-      )}
-
-      {/* ── Notification bell ── */}
-      <button
-        aria-label="Notifications"
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-white/40 hover:bg-white/6 hover:text-white transition-colors"
-      >
-        <Bell size={16} />
-      </button>
-
-      {/* ── User menu ── */}
-      <div className="relative">
-        <button
-          id="nav-user-menu"
-          onClick={() => setMenuOpen((o) => !o)}
-          className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 hover:bg-white/6 transition-colors"
-          aria-expanded={menuOpen}
-          aria-haspopup="true"
+    <header className="flex h-16 items-center justify-between border-b border-white/8 bg-[#0a0b10] px-4 md:px-6">
+      {/* Left side */}
+      <div className="flex items-center gap-4">
+        {/* Mobile sidebar toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="md:hidden"
+          onClick={onToggleSidebar}
         >
-          {/* Avatar */}
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#7F77DD] to-[#5b53b8] text-xs font-semibold text-white shadow-sm shrink-0">
-            {isLoading ? "…" : getInitials(profile?.full_name ?? user?.email)}
-          </div>
+          {isSidebarOpen ? (
+            <X size={20} />
+          ) : (
+            <Menu size={20} />
+          )}
+        </Button>
 
-          {/* Name + plan (desktop only) */}
-          <div className="hidden md:flex flex-col items-start leading-tight">
-            <span className="text-sm font-medium text-white truncate max-w-[120px]">
-              {isLoading ? "Loading…" : (profile?.full_name ?? user?.email?.split("@")[0])}
-            </span>
-            <Badge variant={planVariant[plan]} className="mt-0.5">
-              {planLabel[plan]}
-            </Badge>
-          </div>
+        {/* Logo */}
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold text-[#7F77DD]">
+            DesignAI
+          </h1>
+        </div>
+      </div>
 
-          <ChevronDown
-            size={14}
-            className={cn(
-              "text-white/40 transition-transform duration-200",
-              menuOpen && "rotate-180"
-            )}
-          />
-        </button>
-
-        {/* Dropdown */}
-        {menuOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setMenuOpen(false)}
-              aria-hidden="true"
-            />
-            <div className="absolute right-0 top-full mt-2 z-20 w-52 rounded-xl border border-white/10 bg-[#15181f] shadow-2xl shadow-black/50 overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/6">
-                <p className="text-sm font-medium text-white truncate">
-                  {profile?.full_name ?? "Your Account"}
-                </p>
-                <p className="text-xs text-white/40 truncate mt-0.5">{user?.email}</p>
-              </div>
-              <div className="p-1">
-                <Link
-                  href="/dashboard/settings"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2 w-full rounded-lg px-3 py-2 text-sm text-white/70 hover:bg-white/6 hover:text-white transition-colors"
-                >
-                  Settings
-                </Link>
-                <button
-                  id="nav-signout"
-                  onClick={handleSignOut}
-                  className="flex items-center gap-2 w-full rounded-lg px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  <LogOut size={14} />
-                  Sign out
-                </button>
-              </div>
-            </div>
-          </>
+      {/* Right side */}
+      <div className="flex items-center gap-3">
+        {/* Plan badge */}
+        {profile?.plan && (
+          <Badge 
+            variant={getPlanVariant(profile.plan)}
+            className="hidden sm:inline-flex"
+          >
+            {profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1)}
+          </Badge>
         )}
+
+        {/* Designs remaining */}
+        <div className="hidden sm:flex items-center gap-1 text-sm text-white/60">
+          <span className="font-medium text-white">
+            {designsRemaining}
+          </span>
+          <span>designs left</span>
+        </div>
+
+        {/* User avatar */}
+        <Avatar className="h-8 w-8">
+          <AvatarFallback className="bg-[#7F77DD]/10 text-[#7F77DD] text-xs font-medium">
+            {getInitials(profile?.full_name)}
+          </AvatarFallback>
+        </Avatar>
+
+        {/* Sign out button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleSignOut}
+          disabled={isSigningOut}
+          className="text-white/60 hover:text-white hover:bg-white/5"
+        >
+          <LogOut size={16} />
+          <span className="hidden sm:inline ml-2">
+            {isSigningOut ? "Signing out..." : "Sign out"}
+          </span>
+        </Button>
       </div>
     </header>
   )

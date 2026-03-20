@@ -9,8 +9,7 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard"
 import { EmptyState } from "@/components/dashboard/EmptyState"
 import { useUser } from "@/hooks/use-user"
 import { useProjects, useCreateProject } from "@/hooks/use-projects"
-import { toastSuccess, toastError } from "@/lib/toast"
-import type { ProjectRow } from "@/types/database"
+import { cn } from "@/lib/utils"
 
 // ── Skeleton loader for project cards ────────────────────────
 function ProjectCardSkeleton() {
@@ -85,7 +84,7 @@ function NewProjectModal({
             id="modal-create-project"
             className="flex-1"
             onClick={() => name.trim() && onCreate(name.trim())}
-            disabled={!name.trim()}
+            disabled={!name.trim() || isLoading}
             isLoading={isLoading}
           >
             Create project
@@ -108,10 +107,9 @@ export default function DashboardPage() {
   const { data, isLoading: projectsLoading } = useProjects()
   const createProject = useCreateProject()
 
-  const projects: ProjectRow[] = data?.projects ?? []
-
   // ── Computed metrics ────────────────────────────────────────
   const metrics = useMemo(() => {
+    const projects = data?.projects ?? []
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
@@ -126,18 +124,18 @@ export default function DashboardPage() {
       : null
 
     return { thisMonth, lastCity, remaining }
-  }, [projects, profile])
+  }, [data?.projects, profile])
+
+  const projects = data?.projects ?? []
 
   // ── Create project handler ──────────────────────────────────
   async function handleCreate(name: string) {
     try {
       const newProject = await createProject.mutateAsync({ name })
-      toastSuccess(`Project "${name}" created successfully!`)
       setShowModal(false)
-      router.push(`/dashboard/projects/${newProject.id}`)
+      router.push(`/dashboard/projects/new?project=${newProject.id}`)
     } catch (error) {
       console.error("Failed to create project:", error)
-      toastError("Failed to create project. Please try again.")
     }
   }
 
@@ -172,16 +170,6 @@ export default function DashboardPage() {
                 : `You have ${projects.length} project${projects.length !== 1 ? "s" : ""}.`}
             </p>
           </div>
-
-          <Button
-            id="btn-new-project"
-            size="lg"
-            className="gap-2 shrink-0 shadow-lg shadow-[#7F77DD]/20"
-            onClick={() => setShowModal(true)}
-          >
-            <Plus size={18} />
-            New Project
-          </Button>
         </div>
 
         {/* ── Metric cards ── */}
@@ -198,14 +186,14 @@ export default function DashboardPage() {
                 trend={{ value: metrics.thisMonth, label: "this month" }}
               />
               <MetricCard
-                label="This Month"
+                label="Generated This Month"
                 value={metrics.thisMonth}
                 icon={Calendar}
                 iconColor="#60a5fa"
                 sub="new projects"
               />
               <MetricCard
-                label="Designs Left"
+                label="Designs Remaining"
                 value={metrics.remaining ?? "—"}
                 icon={Zap}
                 iconColor={
@@ -218,7 +206,7 @@ export default function DashboardPage() {
                 sub={`of ${profile?.designs_limit ?? "—"} total`}
               />
               <MetricCard
-                label="Last Active City"
+                label="Last Location"
                 value={metrics.lastCity}
                 icon={MapPin}
                 iconColor="#a78bfa"
@@ -235,7 +223,10 @@ export default function DashboardPage() {
               Recent Projects
             </h2>
             {projects.length > 0 && (
-              <button className="text-sm text-[#7F77DD] hover:text-[#9990e8] transition-colors">
+              <button 
+                onClick={() => router.push("/dashboard/projects")}
+                className="text-sm text-[#7F77DD] hover:text-[#9990e8] transition-colors"
+              >
                 View all →
               </button>
             )}
@@ -255,13 +246,26 @@ export default function DashboardPage() {
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map((project) => (
+              {projects.slice(0, 6).map((project) => (
                 <ProjectCard key={project.id} project={project} />
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* ── Floating New Project Button ── */}
+      <Button
+        onClick={() => setShowModal(true)}
+        className={cn(
+          "fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg shadow-[#7F77DD]/20",
+          "bg-[#7F77DD] hover:bg-[#9990e8] text-white",
+          "transition-all duration-200 hover:scale-105"
+        )}
+        disabled={createProject.isPending}
+      >
+        <Plus size={24} />
+      </Button>
     </>
   )
 }

@@ -4,7 +4,6 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import type { ProfileInsert } from "@/types/database"
 import {
   Card,
   CardContent,
@@ -151,12 +150,12 @@ export default function RegisterPage() {
     // Supabase auto-creates the profile via the DB trigger.
     // If the trigger isn't deployed yet, upsert manually:
     if (data.user) {
-      await supabase.from("profiles").upsert(
+      await (supabase as any).from("profiles").upsert( // eslint-disable-line @typescript-eslint/no-explicit-any
         {
           id: data.user.id,
           full_name: values.fullName.trim(),
           company_name: values.companyName.trim() || null,
-        } as any, // Type assertion to bypass Supabase type issues
+        },
         { onConflict: "id", ignoreDuplicates: true }
       )
     }

@@ -1,7 +1,6 @@
 /// <reference types="@react-three/fiber" />
 
-import { extend } from '@react-three/fiber'
-import { Object3D } from 'three'
+import '@react-three/fiber'
 
 declare global {
   namespace JSX {

@@ -1,151 +1,94 @@
 "use client"
 
-import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  LayoutDashboard,
-  FolderOpen,
-  Map,
-  FileText,
-  Settings,
-  HelpCircle,
-  Zap,
-} from "lucide-react"
+import Link from "next/link"
+import { LayoutDashboard, FolderOpen, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useUser } from "@/hooks/use-user"
 
-// ── Nav items ─────────────────────────────────────────────────
-
-const NAV_ITEMS = [
-  { href: "/dashboard",          label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/dashboard/projects", label: "Projects",   icon: FolderOpen },
-  { href: "/dashboard/map",      label: "Draw Parcel",icon: Map },
-  { href: "/dashboard/reports",  label: "Reports",    icon: FileText },
-] as const
-
-const NAV_BOTTOM = [
-  { href: "/dashboard/settings", label: "Settings",  icon: Settings },
-  { href: "/help",               label: "Help",       icon: HelpCircle },
-] as const
-
-// ── Nav link ──────────────────────────────────────────────────
-
-function NavLink({
-  href,
-  label,
-  icon: Icon,
-  active,
-}: {
-  href: string
-  label: string
-  icon: React.ElementType
-  active: boolean
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
-        active
-          ? "bg-[#7F77DD]/15 text-[#7F77DD]"
-          : "text-white/50 hover:bg-white/5 hover:text-white"
-      )}
-    >
-      <Icon
-        size={16}
-        className={cn(
-          "shrink-0 transition-colors",
-          active ? "text-[#7F77DD]" : "text-white/35 group-hover:text-white/70"
-        )}
-      />
-      {label}
-      {active && (
-        <div className="ml-auto h-1.5 w-1.5 rounded-full bg-[#7F77DD]" aria-hidden="true" />
-      )}
-    </Link>
-  )
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
 }
 
-// ────────────────────────────────────────────────────────────
-// Sidebar
-// ────────────────────────────────────────────────────────────
+const navigation = [
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    name: "Projects",
+    href: "/dashboard/projects",
+    icon: FolderOpen,
+  },
+  {
+    name: "Settings",
+    href: "/dashboard/settings",
+    icon: Settings,
+  },
+]
 
-export function Sidebar() {
+export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname()
-  const { profile } = useUser()
-
-  const remaining =
-    profile ? Math.max(0, profile.designs_limit - profile.designs_used) : null
-  const pct = profile
-    ? Math.round((profile.designs_used / profile.designs_limit) * 100)
-    : 0
 
   return (
-    <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-white/6 bg-[#0d0f14] h-full">
-      <div className="flex flex-col flex-1 overflow-y-auto px-3 pt-6 pb-4">
-        {/* ── Main nav ── */}
-        <nav aria-label="Main navigation" className="space-y-0.5">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              active={
-                item.href === "/dashboard"
-                  ? pathname === "/dashboard"
-                  : pathname.startsWith(item.href)
-              }
-            />
-          ))}
-        </nav>
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+          onClick={onClose}
+        />
+      )}
 
-        {/* ── Spacer ── */}
-        <div className="flex-1" />
-
-        {/* ── Usage meter ── */}
-        {remaining !== null && (
-          <div className="mb-4 rounded-xl border border-white/8 bg-white/3 p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-white/60">Designs used</span>
-              <span className="text-xs font-semibold text-white">
-                {profile?.designs_used}/{profile?.designs_limit}
-              </span>
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-orange-400" : "bg-[#7F77DD]"
-                )}
-                style={{ width: `${Math.min(pct, 100)}%` }}
-              />
-            </div>
-            {remaining === 0 && (
-              <Link
-                href="/dashboard/upgrade"
-                className="flex items-center gap-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
-              >
-                <Zap size={11} />
-                Upgrade for more
-              </Link>
-            )}
-          </div>
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed left-0 top-16 z-50 h-[calc(100vh-4rem)] w-64 transform border-r border-white/8 bg-[#0a0b10] transition-transform duration-200 ease-in-out md:relative md:top-0 md:z-0 md:h-full md:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full"
         )}
+      >
+        <nav className="flex h-full flex-col p-4">
+          <ul className="space-y-2">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href || 
+                (item.href !== "/dashboard" && pathname.startsWith(item.href))
+              
+              return (
+                <li key={item.name}>
+                  <Link
+                    href={item.href}
+                    onClick={onClose}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                      "hover:bg-white/5 hover:text-white",
+                      isActive
+                        ? "border-l-2 border-[#7F77DD] bg-[#7F77DD]/10 text-[#7F77DD] pl-[11px]"
+                        : "text-white/60 border-l-2 border-transparent pl-[11px]"
+                    )}
+                  >
+                    <item.icon 
+                      size={18} 
+                      className={cn(
+                        isActive ? "text-[#7F77DD]" : "text-white/40"
+                      )} 
+                    />
+                    {item.name}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
 
-        {/* ── Bottom nav ── */}
-        <nav aria-label="Secondary navigation" className="space-y-0.5 border-t border-white/6 pt-3">
-          {NAV_BOTTOM.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              active={pathname.startsWith(item.href)}
-            />
-          ))}
+          {/* Footer */}
+          <div className="mt-auto pt-4 border-t border-white/8">
+            <div className="text-xs text-white/40 px-3">
+              <p>DesignAI v1.0</p>
+              <p className="mt-1">AI-powered architecture</p>
+            </div>
+          </div>
         </nav>
-      </div>
-    </aside>
+      </aside>
+    </>
   )
 }

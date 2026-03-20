@@ -56,9 +56,6 @@ const AMENITY_GROUPS = [
   },
 ]
 
-// Flat list for lookup
-const ALL_AMENITIES = AMENITY_GROUPS.flatMap((g) => g.items)
-
 // ─────────────────────────────────────────────────────────────
 // UnitMixRow
 // ─────────────────────────────────────────────────────────────
