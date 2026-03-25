@@ -1,129 +1,68 @@
+version: '3.8'
+
 services:
-  # ──────────────────────────────────────────
-  # Next.js Web App
-  # ──────────────────────────────────────────
-  web:
+  frontend:
     build:
-      context: ./apps/web
-      dockerfile: Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       - NEXT_PUBLIC_MAPBOX_TOKEN=${MAPBOX_TOKEN}
-      - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
-    volumes:
-      - ./apps/web:/app
-      - /app/node_modules
-      - /app/.next
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
     depends_on:
-      api:
-        condition: service_healthy
-    networks:
-      - designai-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - backend
 
-  # ──────────────────────────────────────────
-  # FastAPI Backend
-  # ──────────────────────────────────────────
-  api:
+  backend:
     build:
-      context: ./apps/api
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile.dev
     ports:
       - "8000:8000"
+    volumes:
+      - ./backend:/app
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - REDIS_URL=redis://redis:6379/0
+      - PYTHON_ENV=development
       - DATABASE_URL=${DATABASE_URL}
-      - SECRET_KEY=${SECRET_KEY}
-      - ENVIRONMENT=development
-    volumes:
-      - ./apps/api:/app
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - designai-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # ──────────────────────────────────────────
-  # Celery Worker (background AI tasks)
-  # ──────────────────────────────────────────
-  celery-worker:
-    build:
-      context: ./apps/api
-      dockerfile: Dockerfile
-    command: celery -A workers.tasks worker --loglevel=info --concurrency=4
-    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=${DATABASE_URL}
-      - SECRET_KEY=${SECRET_KEY}
-      - ENVIRONMENT=development
-    volumes:
-      - ./apps/api:/app
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - MAPBOX_TOKEN=${MAPBOX_TOKEN}
+      - NREL_API_KEY=${NREL_API_KEY}
+      - REDIS_URL=${REDIS_URL}
+      - MAX_DESIGN_VARIANTS=${MAX_DESIGN_VARIANTS:-5}
+      - EVOLUTION_GENERATIONS=${EVOLUTION_GENERATIONS:-3}
+      - ENABLE_VR=${ENABLE_VR:-true}
     depends_on:
-      - redis
-      - api
-    networks:
-      - designai-net
-    restart: unless-stopped
+      - postgres
 
-  # ──────────────────────────────────────────
-  # Celery Flower (task monitoring UI)
-  # ──────────────────────────────────────────
-  celery-flower:
-    build:
-      context: ./apps/api
-      dockerfile: Dockerfile
-    command: celery -A workers.tasks flower --port=5555
-    ports:
-      - "5555:5555"
+  postgres:
+    image: postgres:15
     environment:
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - redis
-      - celery-worker
-    networks:
-      - designai-net
-    restart: unless-stopped
-
-  # ──────────────────────────────────────────
-  # Redis (message broker + result backend)
-  # ──────────────────────────────────────────
-  redis:
-    image: redis:7-alpine
+      POSTGRES_DB: archai
+      POSTGRES_USER: archai_user
+      POSTGRES_PASSWORD: archai_pass
     ports:
-      - "6379:6379"
+      - "5432:5432"
     volumes:
-      - redis-data:/data
-    command: redis-server --appendonly yes
-    networks:
-      - designai-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - postgres_data:/var/lib/postgresql/data
+
+  # Optional: Local Redis for development (comment out if using Upstash)
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
 
 volumes:
-  redis-data:
-
-networks:
-  designai-net:
-    driver: bridge
+  postgres_data:
+  # redis_data:

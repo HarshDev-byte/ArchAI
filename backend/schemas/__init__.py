@@ -1,0 +1,1 @@
+# Schemas package for ArchAI FastAPI backend

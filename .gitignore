@@ -1,51 +1,49 @@
-# DesignAI — Root .gitignore
-# ──────────────────────────
-
-# Environment
+# Environment variables (NEVER commit secrets)
 .env
-.env.local
-.env.*.local
-
-# Node
-node_modules/
-.npm
-npm-debug.log*
-
-# Next.js
-apps/web/.next/
-apps/web/out/
-apps/web/build/
+.env.*
+!.env.example
 
 # Python
-apps/api/__pycache__/
-apps/api/*.py[cod]
-apps/api/*$py.class
-apps/api/.venv/
-apps/api/venv/
-apps/api/dist/
-apps/api/*.egg-info/
-apps/api/.eggs/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+.Python
 
-# Testing
-coverage/
-.nyc_output/
-.pytest_cache/
+# Node / Next.js
+node_modules/
+.next/
+out/
+.npm/
+*.tsbuildinfo
 
-# IDEs
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / Editor
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Docker
-.dockerignore
-
-# Turbo
-.turbo/
-
-# Build artifacts
+# Logs
 *.log
+logs/
+
+# Docker volumes / temp
+*.sqlite
+*.db
+
+# Misc
+*.bak
+*.orig
